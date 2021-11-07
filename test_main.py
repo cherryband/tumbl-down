@@ -16,6 +16,12 @@ class TumblDownTestCase(unittest.TestCase):
                 "https://64.media.tumblr.com/7ce02d1c06accb2db65ffae410592807/b718ff429b370a25-d4/s640x960/dff9bb177424a46c598be9768abf6d7ace8276af.png",
                 "https://64.media.tumblr.com/8173aec87f24dad743c8607721c5fe06/b718ff429b370a25-c4/s640x960/f64312a68a8f8999dc3efad84b7777f8f62db00a.png",
                 "https://64.media.tumblr.com/c95be592fed81a52e597f524930207f8/b718ff429b370a25-36/s640x960/189ff2d22791c6110e2d2bbf9c0c8f5338b3a786.png"])
+        self.assertEqual(
+            extractor.extract_tumblr_images("https://kittenwitchandthebadvibes.tumblr.com/post/661792902683525120/make-a-habit-of-scheduling-in-and-defending"),
+            [
+                "https://64.media.tumblr.com/c1500c8ad3c53c8dd3768b70bed09134/ccffdfdc14aead67-2f/s1280x1920/1837f31750522ceaed01f0b6679fc71492de6afe.gifv",
+                "https://64.media.tumblr.com/0b3958305e93b69bd446fa5ad8c6f4b2/ccffdfdc14aead67-f6/s1280x1920/e0e346f72539cf303e9ea3a7cb8e2185ace9c2f3.gifv",
+                "https://64.media.tumblr.com/b8a53976248ae44c1a595ffacbbe483d/ccffdfdc14aead67-e4/s1280x1920/53b3a4f0e34550b07dd0da44e2f25caa1ad18612.gifv"])
 
         # test single image without viewer
         self.assertEqual(
