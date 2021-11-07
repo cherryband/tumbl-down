@@ -38,6 +38,13 @@ class TumblDownTestCase(unittest.TestCase):
             "https://stuckwith-harry.tumblr.com/post/640948223894290432/lesser-movies-than-mamma-mia-2008-wouldve-made"),
                          [])
 
+        # test tumblr post with custom domain
+        self.assertEqual(
+            extractor.extract_tumblr_images(
+                "https://dailyskyfox.com/post/656342309663801344/hamil-pt-5"),
+            [
+                "https://64.media.tumblr.com/6f508a4fc1a07ca20cdf786b730c982d/61ae23b5425caadf-52/s1280x1920/67ef623aed16409bb199478425fc57417733b39d.png"])
+
         # test non-posts and non-URLs
         with self.assertRaises(ValueError):
             extractor.extract_tumblr_images("https://temmiechang.tumblr.com/")
