@@ -12,8 +12,8 @@ def _find_post(tag):
 
 def _find_post_image(tag):
     return tag.name == 'img' \
-           and not (tag.has_attr('class') and 'avatar' in tag['class']) \
-           and 'avatar' not in tag['src']
+           and "64.media.tumblr.com" in tag['src'] \
+           and not (tag.has_attr('class') and 'avatar' in tag['class'])
 
 
 def _find_post_iframe(tag):
@@ -38,21 +38,22 @@ def extract_tumblr_images(tumblr_post_link: str) -> list[str]:
 
     blog_url = tumblr_post_link.split("/post/")[0]
     document = _get_bs_document(tumblr_post_link)
-    post = document.find(_find_post)
     if iframe := document.find(_find_post_iframe):
         src_link = blog_url + iframe['src']
         post = _get_bs_document(src_link)
+    else:
+        post = document.find(_find_post)
 
     image_links = []
     for img in post.find_all(_find_post_image):
-        if (parent := img.parent).name == 'a' and parent.has_attr('href'):
+        if (parent := img.parent).has_attr('href'):
             if "64.media.tumblr.com" in (href := parent['href']):
                 image_links.append(href)
             elif href.startswith(blog_url):
                 image_links.append(_extract_tumblr_image_viewer(href))
-        elif img.has_attr("data-highres") and "64.media.tumblr.com" in (link := img['data-highres']):
-            image_links.append(link)
-        elif "64.media.tumblr.com" in (link := img['src']):
-            image_links.append(link)
+        elif img.has_attr("data-highres"):
+            image_links.append(img['data-highres'])
+        else:
+            image_links.append(img['src'])
 
     return image_links
