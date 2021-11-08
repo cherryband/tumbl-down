@@ -33,7 +33,7 @@ def _get_bs_document(link):
 
 
 def extract_tumblr_images(tumblr_post_link: str) -> list[str]:
-    if not re.match(r'^https://\S+\.tumblr\.com/post/\d+(/(\S+)?)?$', tumblr_post_link):
+    if not re.match(r'^https://\S+?/post/\d+(/(\S+)?)?$', tumblr_post_link):
         raise ValueError("URL does not point to a Tumblr post")
 
     blog_url = tumblr_post_link.split("/post/")[0]
@@ -46,11 +46,13 @@ def extract_tumblr_images(tumblr_post_link: str) -> list[str]:
 
     image_links = []
     for img in post.find_all(_find_post_image):
-        if (parent := img.parent).has_attr('href'):
-            if "64.media.tumblr.com" in (href := parent['href']):
-                image_links.append(href)
-            elif href.startswith(blog_url):
+        if (parent := img.parent).has_attr('href') :
+            if (href := parent['href']).startswith(blog_url):
                 image_links.append(_extract_tumblr_image_viewer(href))
+            else:
+                image_links.append(href)
+        elif parent.has_attr('data-big-photo'):
+            image_links.append(parent['data-big-photo'])
         elif img.has_attr("data-highres"):
             image_links.append(img['data-highres'])
         else:
