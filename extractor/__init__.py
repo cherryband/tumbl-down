@@ -1,7 +1,6 @@
 from __future__ import annotations
 from bs4 import BeautifulSoup
 import requests
-import re
 
 
 def _find_post(tag):
@@ -32,12 +31,16 @@ def _get_bs_document(link):
         return BeautifulSoup(r.text, 'html.parser')
 
 
-def extract_tumblr_images(tumblr_post_link: str) -> list[str]:
-    if not re.match(r'^https://\S+?/post/\d+(/(\S+)?)?$', tumblr_post_link):
-        raise ValueError("URL does not point to a Tumblr post")
+def extract_tumblr_images(blog_id: str, post_id) -> list[str]:
+    if not int(post_id):
+        raise ValueError("Post ID should be integer")
 
-    blog_url = tumblr_post_link.split("/post/")[0]
-    document = _get_bs_document(tumblr_post_link)
+    blog_url = f'https://{blog_id}.tumblr.com'
+    post_url = f'{blog_url}/post/{post_id}'
+
+    if not (document := _get_bs_document(post_url)):
+        raise ValueError("Invalid blog ID or post ID")
+
     if iframe := document.find(_find_post_iframe):
         src_link = blog_url + iframe['src']
         post = _get_bs_document(src_link)
@@ -47,7 +50,7 @@ def extract_tumblr_images(tumblr_post_link: str) -> list[str]:
     image_links = []
     for img in post.find_all(_find_post_image):
         if (parent := img.parent).has_attr('href') :
-            if (href := parent['href']).startswith(blog_url):
+            if (href := parent['href']).endswith(f'/image/{post_id}'):
                 image_links.append(_extract_tumblr_image_viewer(href))
             else:
                 image_links.append(href)
