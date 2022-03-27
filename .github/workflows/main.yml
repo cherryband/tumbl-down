@@ -27,6 +27,14 @@ jobs:
 
       # Runs a set of commands using the runners shell
       - name: Simple python test
+        # The script does the following:
+        # For files in /test directory (** means recursive) with .py extension, run python unittest.
+        # sed command replaces every forward slash ('/') with a dot('.')("s/\//./g"),
+        # and removes the .py extension ("s/\.py$//").
+        # This makes the filename conform to the python package naming scheme,
+        # and therefore understood by unittest module.
         run: |
           pip install -r requirements.txt
-          python -m unittest test_main.py
+          for file in test/**.py;
+            do python -m unittest "$(sed "{s/\//./g; s/\.py$//}" <<< "$file")";
+          done

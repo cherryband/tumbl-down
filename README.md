@@ -16,7 +16,7 @@ To set up, on the root project directory, run:
 
 > virtualenv -p python3 venv
 
-You may also replace `venv` with the name of your choice. Also replace every subsequent occurances of `venv` with your name of choice.
+You may also replace `venv` with the name of your choice. Also replace every subsequent occurrences of `venv` with your name of choice.
 
 Enter `source venv/bin/activate` on your terminal to enable virtualenv before proceeding to next step.
 
@@ -35,7 +35,8 @@ The program is in development and is not functional. TODO.
 # Testing
  
 Enter virtualenv by entering `source venv/bin/activate` on your terminal, if applicable.
-On the test directory, run `python <test_filename>.py`.
+On the root project directory, run `python -m unittest <test_package_name>`.
+For example, to run test file `test/tumblr_feed.py`, run `python -m unittest test.tumblr_feed`.
 
 # License
 
