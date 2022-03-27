@@ -1,8 +1,9 @@
+#!/usr/bin/python
 import unittest
-import extractor
+import extractor.tumblr_post as extractor
 
 
-class TumblDownTestCase(unittest.TestCase):
+class TumblrPostTestCase(unittest.TestCase):
     def test_extract_tumblr_image_links(self):
         # test single image
         self.assertEqual(extractor.extract_tumblr_images("kiminukii", '656015203710976000'),
@@ -49,7 +50,3 @@ class TumblDownTestCase(unittest.TestCase):
             extractor.extract_tumblr_images("temmiechang", 'temmiechang')
         with self.assertRaises(ValueError):
             extractor.extract_tumblr_images("I am a teapot.", '346409543733251134')
-
-
-if __name__ == '__main__':
-    unittest.main()
