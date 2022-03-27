@@ -29,7 +29,7 @@ class TumblrPostTestCase(unittest.TestCase):
         self.assertEqual(
             extractor.extract_tumblr_images("maruti-bitamin", '663149423546777600'),
             [
-                "https://64.media.tumblr.com/bdf1a1b5dd22c7bb961452c86994e9bb/f4a9103f1a6f2e3c-6c/s500x750/d7d98b5231495cdd5f3746563f957862640207d9.jpg"])
+                "https://64.media.tumblr.com/bdf1a1b5dd22c7bb961452c86994e9bb/f4a9103f1a6f2e3c-6c/s1280x1920/3319e9b6809c8f9d7d56d3da49951762d0e70e54.jpg"])
 
         # test video
         self.assertEqual(extractor.extract_tumblr_images("simonalkenmayer", '664168073150988288'),
@@ -43,7 +43,7 @@ class TumblrPostTestCase(unittest.TestCase):
         self.assertEqual(
             extractor.extract_tumblr_images("dailyskyfox", '656342309663801344'),
             [
-                "https://64.media.tumblr.com/6f508a4fc1a07ca20cdf786b730c982d/61ae23b5425caadf-52/s1280x1920/67ef623aed16409bb199478425fc57417733b39d.png"])
+                "https://64.media.tumblr.com/6f508a4fc1a07ca20cdf786b730c982d/61ae23b5425caadf-52/s2048x3072/cf2cbfec7d5323d1cbd345eeb442d70eeed8c5d9.png"])
 
         # test invalid blog and post id
         with self.assertRaises(ValueError):
