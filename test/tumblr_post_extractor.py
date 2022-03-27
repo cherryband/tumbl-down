@@ -4,6 +4,7 @@ import extractor.tumblr_post as extractor
 
 
 class TumblrPostTestCase(unittest.TestCase):
+    # noinspection SpellCheckingInspection
     def test_extract_tumblr_image_links(self):
         # test single image
         self.assertEqual(extractor.extract_tumblr_images("kiminukii", '656015203710976000'),
