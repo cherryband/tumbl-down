@@ -1,4 +1,5 @@
 #!/usr/bin/python
+from __future__ import annotations
 import json
 
 from util import request_get
