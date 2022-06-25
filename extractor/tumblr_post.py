@@ -1,16 +1,17 @@
 #!/usr/bin/python
 from __future__ import annotations
-from extractor import _get_bs_document, _tag_attr
+from extractor import _get_bs_document
+from util import tag_attr
 
 
 def _find_post(tag):
     return (tag.name == "article"
-            or (_tag_attr(tag, "id") in ("post", "posts") and tag.name != "section")
+            or (tag_attr(tag, "id") in ("post", "posts") and tag.name != "section")
             or (tag.has_attr("class") and "post" in tag["class"]))
 
 
 def _find_meta_image(tag):
-    return tag.name == "meta" and _tag_attr(tag, "property") == "og:image"
+    return tag.name == "meta" and tag_attr(tag, "property") == "og:image"
 
 
 def _find_post_image(tag):
@@ -69,7 +70,7 @@ def _best_res(links: list[str] | tuple[str, str]) -> str | None:
         # since this format is essentially a JPEG wrapped in a PNG container,
         # we replace .pnj for .png to get the best quality.
         if link.endswith(".pnj"):
-            link = link.replace(".pnj", ".png")
+            link = link.removesuffix(".pnj") + ".png"
         if (link_res := _parse_res(link)) > res:
             best_res = link
             res = link_res
