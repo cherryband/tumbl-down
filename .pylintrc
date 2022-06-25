@@ -1,3 +1,4 @@
 [Main]
 recursive = True
 ignore = venv, test, LICENSE, README.md, requirements.txt
+fail-under = 7
