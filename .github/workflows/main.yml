@@ -20,7 +20,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Python Linter
-      - run: |
+        run: |
           pip install pylint
           pylint --rcfile=.pylintrc *
         
