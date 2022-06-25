@@ -34,6 +34,7 @@ jobs:
         # This makes the filename conform to the python package naming scheme,
         # and therefore understood by unittest module.
         run: |
+          python -V
           pip install -r requirements.txt
           for file in test/**.py;
             do python -m unittest "$(sed "{s/\//./g; s/\.py$//}" <<< "$file")";
