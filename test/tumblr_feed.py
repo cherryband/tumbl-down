@@ -2,6 +2,7 @@
 import unittest
 import feed.tumblr_feed as feed
 
+
 class MyTestCase(unittest.TestCase):
     # noinspection SpellCheckingInspection
     def test_get_recent_tumblr_posts(self):
@@ -9,7 +10,8 @@ class MyTestCase(unittest.TestCase):
 
         self.assertEqual(len(recent_posts), 20)
         for post in recent_posts:
-            self.assertRegexpMatches(post, r'\d{18}')
+            self.assertRegexpMatches(post, r"\d{18}")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()
