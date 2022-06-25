@@ -47,7 +47,6 @@ jobs:
         # This makes the filename conform to the python package naming scheme,
         # and therefore understood by unittest module.
       - run: |
-          apt install python3.9
           python -V
           pip install -r requirements.txt
           for file in test/**.py;
