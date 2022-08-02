@@ -1,7 +1,7 @@
 #!/usr/bin/python
 from __future__ import annotations
 from bs4 import BeautifulSoup
-from util import request_get
+from util.__init__ import request_get
 
 
 def _get_bs_document(link: str) -> BeautifulSoup | None:

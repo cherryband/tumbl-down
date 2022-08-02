@@ -2,6 +2,7 @@
 from __future__ import annotations
 from extractor import _get_bs_document
 from util import tag_attr
+from util.tumblr import assert_post_id_schema, assert_blog_id_schema
 
 
 def _find_post(tag):
@@ -79,10 +80,8 @@ def _best_res(links: list[str] | tuple[str, str]) -> str | None:
 
 
 def extract_tumblr_images(blog_id: str, post_id: str) -> list[str]:
-    if not post_id.isdecimal():
-        raise ValueError("post_id should contain digits (0-9) only.")
-    if not blog_id.replace('-', '').replace('_', '').isalnum():
-        raise ValueError("blog_id seems to be incorrect. Is there spaces?")
+    assert_blog_id_schema(blog_id)
+    assert_post_id_schema(post_id)
 
     blog_url = f"https://{blog_id}.tumblr.com"
     post_url = f"{blog_url}/post/{post_id}"

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 
 from util import request_get
+from util.tumblr import assert_blog_id_schema
 
 
 def _print_err(message, error):
@@ -12,8 +13,7 @@ def _print_err(message, error):
 
 
 def get_recent_tumblr_posts(blog_id: str, amount: int = 20, offset: int = 0) -> list[str]:
-    if not blog_id.replace('-', '').replace('_', '').isalnum():
-        raise ValueError("blog_id seems to be incorrect. Is there spaces?")
+    assert_blog_id_schema(blog_id)
 
     blog_url = f"https://{blog_id}.tumblr.com"
     query_url = f"{blog_url}/api/read/json"
