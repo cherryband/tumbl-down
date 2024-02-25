@@ -1,9 +1,10 @@
 #!/usr/bin/python
+"""module with common helper functions"""
+
 from __future__ import annotations
 
 import dataclasses
 import os
-from os import path
 import sys
 import time
 from typing import Optional
@@ -13,20 +14,46 @@ from bs4 import BeautifulSoup
 from requests import Response
 from requests.exceptions import HTTPError
 
+from common import history
+
 DEBUG = False
+
+@dataclasses.dataclass
+class File:
+    """Data class for downloadable files"""
+    _id: str
+    link: str
+    modtime: int
+    name: str = None
+
+    def get_filename(self):
+        if not self.name:
+            return self.link.split("/")[-1]
+        return self.name
 
 
 def get_bs_document(url: str, params: Optional[dict] = None, **options) -> BeautifulSoup | None:
+    """
+    Helper function for querying the web with error handling.
+    :param url: destination URL
+    :param params: optional URL parameters; default None
+    :return: BeautifulSoup object, or None when unsuccessful
+    """
     req = request_get(url, params, **options)
     if req.status_code == 200:
         return BeautifulSoup(req.text, "html.parser")
     if req.status_code // 100 == 4:
-        raise ValueError("Bad Request. Has the post/account been deleted or made private?")
+        raise ValueError("Bad Request. Is the spelling correct? "
+                         "Are the post and the account public?")
     return None
 
 
-def get_extension(file: str):
-    return "." + file.split('.')[-1]
+def get_extension(file: str) -> str:
+    filename = file.split('/')[-1]
+    ext = filename.split('.')[-1]
+    if ext:
+        return f".{ext}"
+    return ""
 
 
 def debug_out(message: str) -> None:
@@ -35,13 +62,23 @@ def debug_out(message: str) -> None:
 
 
 def request_get(url: str, params: Optional[dict] = None, **options) -> Optional[Response]:
+    """
+    Helper function for querying the web with error handling.
+    :param url: destination URL
+    :param params: optional URL parameters; default None
+    :return: Response object, or None when unsuccessful
+    """
     req = None
+    debug_out(f"request url: {url}, params: {params}")
     try:
-        req = requests.get(url, params, **options, timeout=10)
+        req = requests.get(url, params, **options, timeout=60,
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; rv:114.0)'
+                   ' Gecko/20100101 Firefox/114.0'})
         if req.status_code // 100 == 5:
             req.raise_for_status()
         elif req.status_code // 100 == 4:
-            raise ValueError("Bad Request. Is the account ID correct?")
+            raise ValueError("Bad Request. Is the spelling correct? "
+                             "Are the post and the account public?")
     except HTTPError as err:
         _print_err("Server is acting strange. Is the service available?", err)
     except ConnectionError as err:
@@ -51,54 +88,18 @@ def request_get(url: str, params: Optional[dict] = None, **options) -> Optional[
     return req
 
 
-def request_download(url: str, path_dir: str, filename: str,
-                     modified: float = None, **options) -> None:
-    if options is None:
-        options = {}
-
-    debug_out(f'Downloading "{url}" to {path_dir}')
-    if not path.exists(path_dir):
-        debug_out('Target Directory Does Not Exist; Create')
-        os.mkdir(path_dir)
-
-    filepath = path.join(path_dir, filename)
-    debug_out(f'Complete File Path: {filepath}')
-
-    if path.exists(filepath):
-        debug_out('File exists; Skipping...')
-        return
-
-    req = request_get(url, stream=True)
-    debug_out('Connection Established.')
-    with open(filepath, "xb+") as dest:
-        debug_out('Downloading...')
-        for chunk in req.iter_content(chunk_size=8192):
-            dest.write(chunk)
-
-    debug_out('Download Finished.')
-    if modified:
-        os.utime(filepath, (time.time(), modified))
-        debug_out(f'Set Modified Time to Timestamp: {modified}')
-
-
 def _print_err(message, error):
     print(message)
     print("The error message below may give you (or someone else) a clue.")
-    print(error)
+    error.print_exc()
     sys.exit()
 
 
 def tag_attr(tag, attr):
+    """
+    None-safe function for querying attributes in a tag
+    :param tag: list-like object to query attributes
+    :param attr: name of the attribute
+    :return: the attribute value, or None
+    """
     return tag[attr] if tag.has_attr(attr) else None
-
-
-@dataclasses.dataclass
-class File:
-    link: str
-    modtime: str
-    name: str = None
-
-    def get_filename(self):
-        if not self.name:
-            return self.link.split("/")[-1]
-        return self.name

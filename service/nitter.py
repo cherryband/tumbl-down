@@ -8,12 +8,13 @@ from slugify import slugify
 from common import debug_out, get_bs_document, get_extension
 from common import File
 
-INSTANCE = "https://nitter.kavin.rocks"
+INSTANCE = "https://nitter.privacydev.net"
+NAME = "X/Twitter (via Nitter)"
+SLUG = "nitter"
 
-
-def parse_timestamp(timestamp: str) -> str:
+def parse_timestamp(timestamp: str) -> int:
     debug_out(f'Parsing "{timestamp}"')
-    return str(datetime.strptime(timestamp, "%b %d, %Y · %I:%M %p %Z").timestamp())
+    return int(datetime.strptime(timestamp, "%b %d, %Y · %I:%M %p %Z").timestamp())
 
 
 def _find_tweets(tag: Tag):
@@ -72,20 +73,22 @@ def _get_feeds(acct_id: str):
 
 
 def get_recent_posts(acct_id: str, amount: int = 20, offset: int = 0) -> list[str]:
-    if amount <= 0:
+    if amount == 0:
         return []
 
     target = amount + offset
     tweets = []
     feed = _get_feeds(acct_id)
-    while len(tweets) < target:
+    while len(tweets) < target or amount < 0:
         next_feed = next(feed)
         if not next_feed:
             break
         tweets += next_feed
 
     end = min(target, len(tweets))
-    return tweets[offset:end]
+    if amount > 0:
+        return tweets[offset:end]
+    return tweets[offset:]
 
 
 def extract_images(acct_id: str, post_id: str) -> list[File]:
@@ -96,13 +99,16 @@ def extract_images(acct_id: str, post_id: str) -> list[File]:
 
     post_time = tweet.find('span', class_='tweet-date').find('a')['title']
     post_time = parse_timestamp(post_time)
-    debug_out("Parsed Date: " + post_time)
+    debug_out(f"Parsed Date: {post_time}")
 
-    attachments = tweet.find(class_="attachments").find_all(class_='attachment')
-    title = tweet.find('div', class_='tweet-content').text
-    title = slugify(title) if title else acct_id
-    if len(title) > 100:
-        title = title[:100]
+    attachments = tweet.find(class_="attachments")
+    if not attachments:
+        return []
+    attachments = attachments.find_all(class_='attachment')
+    tweet_content = tweet.find('div', class_='tweet-content').text
+    title = slugify(tweet_content, max_length=80, allow_unicode=True)
+    if not title:
+        title = acct_id
 
     def gen_name():
         for i in range(4):
@@ -126,7 +132,7 @@ def extract_images(acct_id: str, post_id: str) -> list[File]:
         if image_link:
             debug_out(f"Image Link: {image_link}")
             image_list.append(
-                File(image_link, post_time,
+                File(post_id, image_link, post_time,
                      name=next(name) + get_extension(image_link)
                      )
             )

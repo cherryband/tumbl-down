@@ -23,20 +23,22 @@ class MyTestCase(unittest.TestCase):
             self.assertRegex(post, r"^\d{19}$")
 
     def test_extract_single_tweet_image(self):
+        file = nitter.extract_images("crazymlpmoments", "1627042771906482177")
         # Normal image
         self.assertEqual(
             [
                 f"{nitter.INSTANCE}/pic/orig/media%2FFpKCEr0akAAbwZg.png"
             ],
-            nitter.extract_images("crazymlpmoments", "1627042771906482177")
+            file.link
         )
 
+        file = nitter.extract_images("daily_foxington", "1622943905057587201")
         # "GIF" (processed as .mp4)
         self.assertEqual(
             [
                 f"{nitter.INSTANCE}/pic/video.twimg.com%2Ftweet_video%2FFoXa4TgXEAAAXVm.mp4"
             ],
-            nitter.extract_images("daily_foxington", "1622943905057587201")
+            file.link
         )
 
     def test_extract_tweet_no_image(self):

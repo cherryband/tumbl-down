@@ -6,6 +6,8 @@ import re
 
 from common import debug_out, get_bs_document, request_get, get_extension, File
 
+NAME="Tumblr"
+SLUG="tumblr"
 
 def _safe_contains(tag, attr, val, on_null=True) -> bool:
     if tag.has_attr(attr):
@@ -139,7 +141,7 @@ def _extract_from_api(raw_resp) -> list[str]:
     return images
 
 
-def combine_best(*link_lists: list[str]) -> list[str]:
+def _combine_best(*link_lists: list[str]) -> list[str]:
     sizes = [len(link_list) for link_list in link_lists]
     list_size = len(link_lists)
     max_length = max(sizes)
@@ -155,6 +157,17 @@ def combine_best(*link_lists: list[str]) -> list[str]:
             best_links.append(best_link)
 
     return best_links
+
+
+def _extract_from_image_viewer(image_viewer_url: str) -> list[str]:
+    try:
+        link_from_image_viewer = [_extract_from_viewer(get_bs_document(image_viewer_url))]
+        debug_out("OK.")
+        return link_from_image_viewer
+
+    except ValueError:  # Normal if image viewer is not available
+        debug_out("Image viewer not available.")
+    return []
 
 
 def extract_images(acct_id: str, post_id: str) -> list[File]:
@@ -191,7 +204,7 @@ def extract_images(acct_id: str, post_id: str) -> list[File]:
     link_from_image_viewer = _extract_from_image_viewer(image_viewer_url)
 
     debug_out("4. Combining all links and finding best resolution...")
-    image_links = combine_best(link_from_image_viewer, links_from_meta, links_from_viewer)
+    image_links = _combine_best(link_from_image_viewer, links_from_meta, links_from_viewer)
     debug_out(f"Extraction complete; {len(image_links)} image(s) found.")
 
     title = post['slug'] if post['slug'] else acct_id
@@ -201,32 +214,20 @@ def extract_images(acct_id: str, post_id: str) -> list[File]:
             yield f"{title}-{post['id']}-{i+1}"
     name = get_filename()
 
-    return [File(link, post["unix-timestamp"],
+    return [File(post_id, link, int(post["unix-timestamp"]),
                  name=next(name) + get_extension(link)) for link in image_links]
 
 
-def _extract_from_image_viewer(image_viewer_url: str) -> list[str]:
-    try:
-        link_from_image_viewer = [_extract_from_viewer(get_bs_document(image_viewer_url))]
-        debug_out("OK.")
-        return link_from_image_viewer
-
-    except ValueError:  # Normal if image viewer is not available
-        debug_out("Image viewer not available.")
-    return []
-
-
 def get_recent_posts(acct_id: str, amount: int = 20, offset: int = 0) -> list[str]:
-    raw_response = _query_api(acct_id, num=amount, filter="text", start=offset)
+    raw_response = _query_api(acct_id, num=amount if amount > 0 else 0, start=offset)
     response = json.loads(raw_response)
 
     posts = response["posts"]
 
     to_append = []
-    if amount > 50:
+    if amount > 50 or amount < 0:
         total_post = response["posts-total"]
-        if total_post < amount:
-            debug_out("The requested amount exceeds the API limit; the amount will be 50 instead.")
+        if total_post < amount or amount < 0:
             amount = total_post
         to_append = get_recent_posts(acct_id, amount - 50, offset + 50)
 

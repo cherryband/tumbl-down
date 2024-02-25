@@ -1,4 +1,5 @@
 #!/usr/bin/python
+
 from importlib.util import spec_from_file_location, module_from_spec
 from os import path, listdir
 
@@ -25,7 +26,7 @@ def _load_module(name, mod_path):
 
 
 def _get_name(filename):
-    return filename.strip(".py")
+    return filename.removesuffix(".py")
 
 
 def _abs_path(relpath, base=BASE_DIR):
