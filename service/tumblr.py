@@ -106,7 +106,7 @@ def _query_api(blog_id: str, **kwargs) -> str:
 
 
 IMAGE_RE = r"https:\\/\\/64\.media\.tumblr\.com\\/(?:[-a-f0-9]+\\/){0,2}" \
-           r"(?:s\d+x|tumblr\w+_)\d+\b(?:\\/)?[\w.]+"
+           r"(?:s\d+x|tumblr_\w+_)\d+\b(?:\\/)?[\w.]+"
 
 
 def _extract_from_api(raw_resp) -> list[str]:
@@ -117,9 +117,11 @@ def _extract_from_api(raw_resp) -> list[str]:
     image_links = [link.replace("\\/", "/") for link in image_links]
     debug_out(f"Found {len(image_links)} image candidate(s).")
 
+    # retrieves an identifier that is unique to a picture,
+    # but not to the same picture with different resolutions
     def get_unique(link):
         split_link = link.strip("https://").split('/')
-        if len(split_link) < 2:
+        if len(split_link) <= 2:
             return split_link[1].split('_')[1]
         return split_link[1]
 
