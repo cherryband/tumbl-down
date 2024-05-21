@@ -7,6 +7,7 @@ import dataclasses
 import os
 import sys
 import time
+import traceback
 from typing import Optional
 
 import requests
@@ -91,7 +92,7 @@ def request_get(url: str, params: Optional[dict] = None, **options) -> Optional[
 def _print_err(message, error):
     print(message)
     print("The error message below may give you (or someone else) a clue.")
-    error.print_exc()
+    traceback.print_exc()
     sys.exit()
 
 

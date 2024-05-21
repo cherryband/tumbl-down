@@ -106,6 +106,9 @@ def download_from_feed(service, acct_id, download_path, post_count=20, redownloa
     debug_out(f"redownload = {redownload}")
     try:
         feed = service.get_recent_posts(acct_id, post_count)
+    except ValueError:
+        print(f"The ID '{acct_id}' seems to be unavailable. Skipping...")
+        return
     except Exception as e:
         _print_err("This is an unexpected error; report this to the issue tracker: "
               "https://github.com/cherryband/tumbl-down/issues", e)
