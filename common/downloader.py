@@ -52,16 +52,30 @@ def request_download(url: str, path_dir: str, filename: str,
         os.utime(filepath, (time.time(), modified))
         debug_out(f'Set Modified Time to Timestamp: {modified}')
 
-def download_files(files: list[File], download_path):
+def download_files(files: list[File], download_path,
+            last_read:history.Post=None) -> Optional[tuple[int, int]]:
     """
     Helper function for downloading multiple files
     :param files: list of files to download
     :param download_path: path to save
+    :return: tuple of timestamp and number of files, or (0, 0) if not applicable
     """
+    if not files or len(files) == 0:
+        return (0, 0)
+
+    modtime = files[0].modtime
+    file_count = len(files)
+    debug_out(f"Uploaded: {modtime}")
+    if last_read and int(modtime) < last_read.timestamp:
+        return (modtime, -1)
+
     for file in files:
         request_download(
             file.link, download_path, file.name, modified=float(file.modtime)
         )
+
+    return (modtime, file_count)
+
 
 
 def oneshot(service, acct_id, download_path, post_id,
@@ -80,20 +94,13 @@ def oneshot(service, acct_id, download_path, post_id,
         if not files:
             return (0, 0)
 
-        modtime = files[0].modtime
-        file_count = len(files)
-        debug_out(f"Uploaded: {modtime}")
-        if last_read and int(modtime) < last_read.timestamp:
-            return (modtime, -1)
-
-        download_files(files, download_path)
-        return (modtime, file_count)
+        return download_files(files, download_path, last_read)
     except Exception as e:
         print(e)
         return (0, 0)
 
 
-def download_from_feed(service, acct_id, download_path, post_count=20, redownload=False):
+def download_from_feed(service, acct_id, download_path, post_count=20, redownload=False, incl_reblog=False):
     """
     Parses and downloads images from recent feed
     :param service: parser/service to use
@@ -102,10 +109,11 @@ def download_from_feed(service, acct_id, download_path, post_count=20, redownloa
     :param post_count: number of posts to download; default = 20
     :param offset: number of most recent posts to skip; default = 0
     :param redownload: whether to re-download posts that are marked as read; default = False
+    :param incl_reblog: whether to download reblogs, i.e., posts from other people; default = False
     """
     debug_out(f"redownload = {redownload}")
     try:
-        feed = service.get_recent_posts(acct_id, post_count)
+        feed = service.get_recent_posts(acct_id, post_count, incl_reblog)
     except ValueError:
         print(f"The ID '{acct_id}' seems to be unavailable. Skipping...")
         return
@@ -121,15 +129,20 @@ def download_from_feed(service, acct_id, download_path, post_count=20, redownloa
         elif not redownload:
             debug_out("No history recorded.")
 
-        print("Searching posts...", end="")
-        for i, post in enumerate(feed):
+        print(f"Searching posts...")
+        post_count = 0
+        for i, imgs in enumerate(feed):
             print("\r", end="")
-            if last_read and post == last_read.post_id:
+            if not imgs:
+                continue
+
+            post_id = imgs[0]._id
+            if last_read and post_id == last_read.post_id:
                 print("\nSkipping already downloaded posts"
                       "(override with -f or config file)...", end="")
                 break
 
-            modtime, dl_files = oneshot(service, acct_id, download_path, post, last_read=last_read)
+            modtime, dl_files = download_files(imgs, download_path, last_read=last_read)
             if modtime == 0:
                 continue
             if dl_files < 0:
@@ -137,12 +150,14 @@ def download_from_feed(service, acct_id, download_path, post_count=20, redownloa
                       "(override with -f or config file)...", end="")
                 break
 
+            skipped_posts = f'({i - post_count} posts without images skipped)' if i > post_count else ''
             file_count += dl_files
-            print(f"Searching {i+1} out of {len(feed)} posts..."
-                  f" ({file_count} image(s) collected)", end="")
-            history.mark_read(rwriter, history.History(service.SLUG, acct_id, post, modtime))
+            post_count += 1
+            print(f"{file_count} image(s) collected from {post_count} posts {skipped_posts}", end="")
 
-    print(f"\nDownloaded {file_count} file(s).")
+            history.mark_read(rwriter, history.History(service.SLUG, acct_id, post_id, modtime))
+
+    print(f"\nDownloaded {file_count} file(s) to {download_path}.")
 
 
 ls = os.listdir()

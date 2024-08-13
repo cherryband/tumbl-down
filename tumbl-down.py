@@ -43,6 +43,7 @@ def _init_argparser():
     parser.add_argument("account_id",
                         help="the account ID(s) to download images from",
                         nargs='*')
+    parser.add_argument("-b", "--reblogs", type=bool, default=True, help="specify whether to include reblogged content")
     return parser
 
 def _read_config(filename: str = "config.csv", path: str = '.') -> list[list]:
@@ -62,9 +63,11 @@ def update_main():
     for i, config in enumerate(configs):
         account, service, dl_path, incl_reblog = [x.strip() for x in config]
         print(f"Fetching feed of {account}... ({i+1}/{len(configs)})")
-        download_from_feed(SERVICES[service], account, dl_path, post_count=args.posts, redownload=args.force)
+        download_from_feed(SERVICES[service], account, dl_path,
+                           post_count=-1, redownload=args.force, incl_reblog=(incl_reblog == "1"))
 
 if __name__ == "__main__":
     parser = _init_argparser()
     args = parser.parse_args()
     cmd_main(args=args)
+

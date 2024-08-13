@@ -27,6 +27,9 @@ def _find_post_image(tag) -> bool:
     return tag.name == "img" and _find_image_link(tag)
 
 
+def _find_contribution(tag) -> bool:
+    return tag.name == "div" and _safe_contains(tag, "data-is-contributed-content", "true")
+
 def _select_best_tag(img) -> str:
     if img.has_attr("srcset"):
         return img["srcset"].split()[-2]
@@ -34,7 +37,8 @@ def _select_best_tag(img) -> str:
     return img["src"]
 
 
-def _extract_from_post(post) -> list[str]:
+def _extract_from_post(post, incl_reblog, is_reblog) -> list[str]:
+    post = post.find(_find_contribution) if not incl_reblog and is_reblog else post
     return [_select_best_tag(img) for img in post.find_all(_find_post_image)]
 
 
@@ -109,11 +113,16 @@ IMAGE_RE = r"https:\\/\\/64\.media\.tumblr\.com\\/(?:[-a-f0-9]+\\/){0,2}" \
            r"(?:s\d+x|tumblr_\w+_)\d+\b(?:\\/)?[\w.]+"
 
 
-def _extract_from_api(raw_resp) -> list[str]:
+def _extract_from_api(body, include_reblogs: bool = False) -> list[str]:
     debug_out("_extract_from_api()")
     # performing naive filtering
     # since there doesn't seem to be a standard form of photos
-    image_links = re.findall(IMAGE_RE, raw_resp)
+
+    if not include_reblogs:
+        re.sub(r'\<blockquote\>.+\<\\/blockquote>', '', body)
+        debug_out('include_reblogs = False; content reduced')
+
+    image_links = re.findall(IMAGE_RE, body)
     image_links = [link.replace("\\/", "/") for link in image_links]
     debug_out(f"Found {len(image_links)} image candidate(s).")
 
@@ -172,7 +181,7 @@ def _extract_from_image_viewer(image_viewer_url: str) -> list[str]:
     return []
 
 
-def extract_images(acct_id: str, post_id: str) -> list[File]:
+def extract_images(acct_id: str, post_id: str, api_response = None, incl_reblog=False) -> list[File]:
     debug_out("\nextract_tumblr_images()")
 
     post_viewer_url = f"https://tumblr.com/{acct_id}/{post_id}"
@@ -187,19 +196,27 @@ def extract_images(acct_id: str, post_id: str) -> list[File]:
 
     debug_out("Document loaded.")
 
-    response = _query_api(acct_id, id=post_id)
-    post = json.loads(response)["posts"][0]
+    post = api_response if api_response else \
+           json.loads(_query_api(acct_id, id=post_id))["posts"][0]
+
+    is_reblog = "reblogged-from-url" in post.keys()
+    debug_out(f"is_reblog = {is_reblog}")
+
+    # Most reliable; not always the best quality.
+    debug_out("1. Extracting links from API response (blog.tumblr.com/api/read/...) ...")
+    body = post['regular-body'] if 'regular-body' in post.keys() else str(post)
+    links_from_meta = _extract_from_api(body, incl_reblog)
+    debug_out(f"OK, found {len(links_from_meta)} image(s).")
+
+    if is_reblog and not incl_reblog and not links_from_meta:
+        debug_out("Reblogged post does not contain new image. Skipping...")
+        return
 
     # New method. Best resolution, even for multiple images.
     # Unable to fetch (especially multiple) animated images.
-    debug_out("1. Extracting links from post viewer (tumblr.com/blog/...) ...")
-    links_from_viewer = _extract_from_post(viewer_doc.find(name="article"))
+    debug_out("2. Extracting links from post viewer (tumblr.com/blog/...) ...")
+    links_from_viewer = _extract_from_post(viewer_doc.find(name="article"), incl_reblog, is_reblog)
     debug_out(f"OK, found {len(links_from_viewer)} image(s).")
-
-    # Most reliable; not always the best quality.
-    debug_out("2. Extracting links from API response (blog.tumblr.com/api/read/...) ...")
-    links_from_meta = _extract_from_api(response)
-    debug_out(f"OK, found {len(links_from_meta)} image(s).")
 
     # Guaranteed the best resolution, however only provides the first image.
     debug_out("3. Extracting from the image viewer (blog.tumblr.com/image/...) ...")
@@ -219,18 +236,30 @@ def extract_images(acct_id: str, post_id: str) -> list[File]:
     return [File(post_id, link, int(post["unix-timestamp"]),
                  name=next(name) + get_extension(link)) for link in image_links]
 
+MAX_POSTCOUNT_LIMIT = 50
+def get_recent_posts(acct_id: str, amount: int = 20, incl_reblog=False) -> list[File]:
+    index = 0
+    offset = 0
 
-def get_recent_posts(acct_id: str, amount: int = 20, offset: int = 0) -> list[str]:
-    raw_response = _query_api(acct_id, num=amount if amount > 0 else 0, start=offset)
+    raw_response = _query_api(acct_id, num=amount if amount > 0 else MAX_POSTCOUNT_LIMIT)
     response = json.loads(raw_response)
 
-    posts = response["posts"]
+    total_post = response["posts-total"]
 
-    to_append = []
-    if amount > 50 or amount < 0:
-        total_post = response["posts-total"]
-        if total_post < amount or amount < 0:
-            amount = total_post
-        to_append = get_recent_posts(acct_id, amount - 50, offset + 50)
+    if total_post < amount or amount < 0:
+        amount = total_post
+        print(f"Notice: Number of posts adjusted to {total_post}.")
 
-    return [post["id"] for post in posts] + to_append
+    while index < amount:
+        cur_index = index - offset
+        if cur_index >= MAX_POSTCOUNT_LIMIT:
+            offset += MAX_POSTCOUNT_LIMIT
+            raw_response = _query_api(acct_id, num=MAX_POSTCOUNT_LIMIT, start=offset)
+            response = json.loads(raw_response)
+            cur_index = 0
+
+        post = response["posts"][cur_index]
+        post_id = post["id"]
+        yield extract_images(acct_id, post_id, post, incl_reblog)
+
+        index += 1

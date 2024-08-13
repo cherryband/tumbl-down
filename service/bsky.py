@@ -69,18 +69,39 @@ def extract_images(acct_id: str, post) -> list[File]:
                  name=next(name) + _get_extension(link)) for link in image_links]
 
 
-def get_recent_posts(acct_id: str, amount: int = 50, cursor: str = "") -> list[str]:
-    limit = 100 if amount > 100 or amount < 0 else amount
+def get_post_count(acct_id: str) -> int:
+    return _query_api("app.bsky.actor.getProfile", actor=acct_id)['postsCount']
+
+
+MAX_POSTS_PER_REQUEST = 100
+def get_recent_posts(acct_id: str, amount: int = 50, incl_reblog=False) -> list[str]:
+    index = 0
+    offset = 0
+    total_posts = get_post_count(acct_id)
+
+    if amount < 0 or total_posts < amount:
+        amount = total_posts
+        print(f"Notice: Number of posts adjusted to {total_posts}.")
+
+    limit = amount if amount < MAX_POSTS_PER_REQUEST else MAX_POSTS_PER_REQUEST
     response = _query_api("app.bsky.feed.getAuthorFeed", actor=acct_id,
-                          limit=limit, cursor=cursor, filter="posts_with_media")
-
+                      limit=limit, filter="posts_with_media")
+    debug_out(response)
     posts = response["feed"]
+    cursor = response["cursor"] if 'cursor' in response.keys() else ''
 
-    to_append = []
-    if amount > 100 or amount < 0:
-        total_post = len(posts)
-        if total_post < amount or amount < 0:
-            amount = total_post
-        to_append = get_recent_posts(acct_id, amount - 100, cursor)
+    while index < amount:
+        cur_index = index - offset
+        if cur_index >= MAX_POSTS_PER_REQUEST:
+            offset += MAX_POSTS_PER_REQUEST
+            response = _query_api("app.bsky.feed.getAuthorFeed", actor=acct_id,
+                              limit=limit, cursor=cursor, filter="posts_with_media")
+            posts = response["feed"]
+            cursor = response["cursor"] if 'cursor' in response.keys() else ''
+            cur_index = 0
 
-    return [post["post"]["uri"].split('/')[-1] for post in posts] + to_append
+        post = posts[cur_index]['post']
+        yield extract_images(acct_id, post)
+
+        index += 1
+
